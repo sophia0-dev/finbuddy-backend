@@ -92,11 +92,12 @@ const requestSponsorship = async (req, res) => {
 
 const getAllSponsorshipRequests = async (req, res) => {
   try {
-    // Fetch students but DO NOT send raw PII to the client
+    // Force Node.js to use the correct built-in crypto module
+    const crypto = require('crypto'); 
+    
     const students = await Student.find({ "sponsorshipRequests.0": { $exists: true } });
     
     const anonymizedStudents = students.map(student => {
-      // Generate the anonymous identifier exactly like your ZKP engine does
       const identityPayload = `${student.matricNumber}:${student.name}`;
       const decentralizedId = crypto.createHash('sha256').update(identityPayload).digest('hex').substring(0, 16);
       
