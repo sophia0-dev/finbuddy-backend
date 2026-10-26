@@ -92,9 +92,24 @@ const requestSponsorship = async (req, res) => {
 
 const getAllSponsorshipRequests = async (req, res) => {
   try {
-    const students = await Student.find({ "sponsorshipRequests.0": { $exists: true } })
-      .select('name matricNumber institution degreeProgram sponsorshipRequests');
-    res.status(200).json({ success: true, students });
+    // Fetch students but DO NOT send raw PII to the client
+    const students = await Student.find({ "sponsorshipRequests.0": { $exists: true } });
+    
+    const anonymizedStudents = students.map(student => {
+      // Generate the anonymous identifier exactly like your ZKP engine does
+      const identityPayload = `${student.matricNumber}:${student.name}`;
+      const decentralizedId = crypto.createHash('sha256').update(identityPayload).digest('hex').substring(0, 16);
+      
+      return {
+        _id: student._id,
+        anonymousId: `ZKP-STUDENT-${decentralizedId}`,
+        institution: student.institution,
+        degreeProgram: student.degreeProgram,
+        sponsorshipRequests: student.sponsorshipRequests
+      };
+    });
+
+    res.status(200).json({ success: true, students: anonymizedStudents });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
